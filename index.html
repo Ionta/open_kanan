@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/link@latest"></script>
+</head>
+<body>
+    
+</body>
+
+<script src="bhsds.js"></script>
+
+
+<script type="module">
+    import LoadFile from "/src/core/FileLoader.js";
+    import eventBus from "/src/core/EventBus.js";
+    import render from "/src/core/Render/Render.js";
+    import authStore from "/src/Stores/AuthStore.js";
+
+    async function initApp(){
+        let app;
+
+        if(authStore.loggedIn){
+            if(window.location.search.startsWith("?board")){
+                app = await LoadFile("Board.html");
+            }
+            else {
+                app = await LoadFile("/src/Pages/ProjectManager.html");
+            }
+        }
+        else{
+            app = await LoadFile("/src/Pages/LoginPage.html");
+        }
+
+        let rootNode = document.querySelector("body");
+        rootNode.innerHTML = "";
+        render(rootNode, app);
+    }
+
+    eventBus.registerHandler("login", ()=>{window.location.reload()});
+    initApp();
+</script>
+
+<script type="module">
+    import LoadFile from "/src/core/FileLoader.js";
+    import render from "/src/core/Render/Render.js";
+
+    async function createComponent(path){
+        let app = await LoadFile(path);
+        let rootNode = document.querySelector("body");
+        render(rootNode, app);
+    }
+
+    async function init(){
+        await createComponent("/src/Components/Feild.html");
+        await createComponent("/src/Components/BoardColumn.html");
+        await createComponent("/src/Components/Card.html");
+        await createComponent("/src/Components/Label.html");
+        await createComponent("/src/Components/Filter.html")
+        await createComponent("/src/Components/ProjectCard.html")
+    }
+
+    init();
+</script>
+
+</html>

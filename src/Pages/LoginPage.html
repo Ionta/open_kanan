@@ -1,0 +1,28 @@
+<div class="column alignCenter justCenter">
+    <div class="column gap">
+        <feild-board title="логин"><input id="name" /></feild-board>
+        <feild-board title="пароль"><input id="password" /></feild-board>
+        <button id="login">Войти</button>
+    </div>
+</div>
+
+<script type="module">
+    import authStore from "/src/Stores/AuthStore.js";
+    import {post} from "/src/Core/Api/Api.js";
+    import eventBus from "/src/core/EventBus.js";
+
+    async function login(){
+        let login = document.querySelector("#name").value;
+        let password = document.querySelector("#password").value;
+
+        console.log(login, password);
+
+        let data = await post("/user/auth", {login:login, password:password});
+
+        if(typeof data.jwt === "string"){
+            authStore.logIn(data.jwt);
+            eventBus.dispatchEvent("login");
+        }
+    }
+    document.querySelector("#login").addEventListener("click", login);
+</script>

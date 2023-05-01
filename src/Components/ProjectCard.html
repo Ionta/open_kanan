@@ -1,0 +1,61 @@
+<template id="project">
+    <style> 
+        .body{
+            color: #475466;
+            background-color: #ffffff;
+            border: 1px solid #bed2eb;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+        .wrapper{
+            position: relative;
+        }
+    </style>
+    <div class="wrapper">
+        <div class="body" id="body">
+            <span id="name">Название проекта</span>
+        </div>
+    </div>
+</template>
+
+<script type="module">
+    import {post} from "./src/Core/Api/Api.js";
+    import taskInformerStore from "./src/Stores/TaskInformerStore.js";
+    import {rerenderComponents} from "./src/Core/Render/Rerender.js";
+    import {replacePath} from "./src/Core/Loaction/ReplacePath.js";
+
+    class Card extends HTMLElement {
+        constructor() {
+            super();
+            // элемент создан
+        }
+
+        render() { // (1)
+            const template = document.querySelector('#project');
+            let title = this.getAttribute('name');
+            let id = this.getAttribute('entity');
+            
+            if(this.shadowRoot == null) this.attachShadow({mode: 'open'});
+            let node = template.content.cloneNode(true);
+            node.getElementById('name').innerHTML = title;
+            node.getElementById('body').addEventListener("click", ()=>replacePath(`board=${id}`));
+            this.shadowRoot.innerHTML = "";
+            this.shadowRoot.append(node);
+        }
+
+        static get observedAttributes() {
+            return ['name','description', "priority"];
+        }
+
+        connectedCallback() { // (2)
+            this.render();
+        }
+
+        attributeChangedCallback(name, oldValue, newValue) {
+            this.render();
+        }
+    }
+    customElements.define('propject-board', Card);
+</script>

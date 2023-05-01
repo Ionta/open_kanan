@@ -1,0 +1,255 @@
+<div class="contentBoard">
+    <button onClick="goToMenu()">Вернутся назад</button>
+    <div class='row justBetween alignCenter' style="margin: 30px;">
+        <div>
+            <h3>Доска</h3>
+            <filter-board></filter-board>
+        </div>
+    </div>
+    <div class="row gap">
+        <div class="row gap boadrs" id="boards">
+            
+        </div>
+        <button class="classicButton" onclick="createColumnDiologOpen()" style="height: 50px;">
+            Создать колонку
+        </button>
+    </div>
+    <dialog id="createDialog" class="classicModal">
+        <div class="column gap">
+            <feild-board title="Название">
+                <input id="taskName"/>
+            </feild-board>
+            <feild-board title="Ярлык">
+                <input list="labels" id="labelInput" /></label>
+                <datalist id="labels">
+                </datalist>
+            </feild-board>
+            <feild-board title="Отвественный">
+                <select id="userList">
+                    
+                </select>
+            </feild-board>
+            <feild-board title="Приоритет">
+                <select id="priorityList">
+                    
+                </select>
+            </feild-board>
+            <textarea id="editorjs"></textarea>
+            <div class="row gap justCenter alignCenter">
+                <button class="classicButton" id="createTaskButton">
+                    Сохранить
+                </button>
+                <button class="classicButton" onclick="closeCreateDialog()">
+                    отмена
+                </button>
+            </div>
+        </div>
+    </dialog>
+    <dialog id="createColumnDialog" class="classicModal">
+        <div class="column gap">
+            <input id="columnName"/>
+            <div class="row gap justCenter alignCenter">
+                <button class="classicButton" id="createColumn">
+                    Создать колонку
+                </button>
+                <button class="classicButton" onclick="closeColumnCreateDialog()">
+                    отмена
+                </button>
+            </div>
+        </div>
+    </dialog>
+</div>
+
+<script type="module">
+    import {post} from "./src/Core/Api/Api.js";
+    import {updateChildren, UpdateSetting} from "./src/Core/Render/UpdateChidren.js";
+    
+    import columnListStore from "./src/Stores/ColumnsListStore.js";
+    import taskInformerStore from "./src/Stores/TaskInformerStore.js";
+    import labelStore from "./src/Stores/LabelStore.js";
+    import userStore from "./src/Stores/UsersStore.js";
+    import priorityStore from "./src/Stores/PriorityStore.js";
+
+    import {getColumnSetting} from "./src/Stores/Settings/ColumnSettings.js";
+
+    /*
+    const editor = new EditorJS({
+        autofocus: true,
+        tools: {
+            checklist: {
+                class: Checklist,
+                inlineToolbar: true,
+            },
+            code: CodeTool,
+            image: SimpleImage,
+        }
+    });
+    */
+
+	async function init(item, first){
+		let boards = document.getElementById('boards');
+        if(first) boards.innerHTML = "";
+
+        let board = document.createElement('column-board');
+        board.setAttribute("entity", item.id);
+        board.setAttribute("onCreate", `createDiologOpen(${item.id})`)
+        board.title = item.name;
+		boards.appendChild(board);
+	}
+
+    async function onLoadTask(item){
+        let labelInput = document.getElementById("labelInput");
+        document.getElementById("taskName").value = item.name;
+        document.getElementById("editorjs").value = item.description;
+        /*
+        if(item.description !== "") editor.render(JSON.parse(item.description));
+        else editor.clear();
+        */
+        document.getElementById("userList").value = item.user ? item.user.id : "";
+        document.getElementById("priorityList").value = item.priority ? item.priority.id : "";
+        boardId = item.boardId;
+        console.log(item.label);
+        labelInput.value = item.label;
+        taskIsNew = false;
+        var favDialog = document.getElementById('createDialog');
+        favDialog.showModal();
+    }
+
+    async function onLoadLabels(item, first){
+        let labels = document.getElementById('labels');
+        if(first) labels.innerHTML = "";
+
+        let board = document.createElement('option');
+        board.setAttribute("value", item.name);
+		labels.appendChild(board);
+    }
+
+    async function onUserLoad(item, first){
+        let list = document.getElementById('userList');
+        if(first) {
+            list.innerHTML = "";
+            
+            let option_ = document.createElement('option');
+            option_.setAttribute("value", "");
+            option_.innerText = "Не указанно";
+            list.appendChild(option_);
+        }
+
+
+        let option = document.createElement('option');
+        option.setAttribute("value", item.id);
+        option.innerText = item.displayValue;
+        list.appendChild(option);
+    }
+
+    async function onPriorityLoad(item, first){
+        let list = document.getElementById('priorityList');
+        if(first) {
+            list.innerHTML = "";
+            
+            let option_ = document.createElement('option');
+            option_.setAttribute("value", "");
+            option_.innerText = "Не указанно";
+            list.appendChild(option_);
+        }
+
+
+        let option = document.createElement('option');
+        option.setAttribute("value", item.id);
+        option.innerText = item.displayValue;
+        list.appendChild(option);
+    }
+
+    const queryString = window.location.search;
+    const params = new URLSearchParams(queryString);
+    const id = parseInt(params.get("board"));
+
+    columnListStore.subscribers.push(init);
+	columnListStore.load({id:id});
+
+    labelStore.subscribers.push(onLoadLabels);
+    labelStore.load({});
+
+    userStore.subscribers.push(onUserLoad);
+    userStore.load({});
+
+    priorityStore.subscribers.push(onPriorityLoad);
+    priorityStore.load({name:"Prioritys"});
+
+    let button = document.querySelector("#createTaskButton");
+    button.addEventListener("click", createTask);
+
+    taskInformerStore.subscribers.push(onLoadTask);
+   
+    const createColumnButton = document.querySelector("#createColumn");
+
+    createColumnButton.addEventListener("click", createColumn);
+
+    async function createColumn(){
+        boardName = document.querySelector("#columnName").value;
+        await post("/Board/createcolumn", {name:boardName, boardId:id});
+        let columns = await post("/Board/getboards",{Id:id});
+
+        updateChildren(boards, getColumnSetting(columns.items));
+        closeColumnCreateDialog();
+    }
+
+    async function createTask(){
+        let name = document.getElementById("taskName").value;
+        let content = document.getElementById("editorjs").value;
+        //let content = JSON.stringify(await editor.save());
+        let label = document.getElementById('labelInput').value;
+        let user = document.querySelector("#userList").value;
+        let priority = document.querySelector("#priorityList").value;
+
+        let userId = user === "" ? undefined : user;
+        let priorityId = priority === "" ? undefined : priority;
+
+        let response = taskIsNew 
+        ? await taskInformerStore.new({"name":name, "description":content, "boardId":boardId, label:label, userId: userId, priorityId: priorityId}) 
+        : await taskInformerStore.save({name:name, description:content, label:label, userId: userId, priorityId: priorityId });
+
+        console.log(response);
+
+        if(response){
+            let column = document.querySelector(`column-board[entity="${boardId}"]`);
+            column.render();
+        }
+        closeCreateDialog();
+    }
+</script>
+
+<script>
+    let boardId = 1;
+    let taskIsNew = false;
+    let boardName = "Новая колонка";
+
+    function createDiologOpen(idBoard){
+        var favDialog = document.getElementById('createDialog');
+        favDialog.showModal();
+        boardId = idBoard;
+        taskIsNew = true;
+        document.getElementById("taskName").value = "";
+        document.getElementById("editorjs").value = "";
+        //editor.clear();
+    }
+
+    function closeCreateDialog(){
+        var favDialog = document.getElementById('createDialog');
+        favDialog.close();
+    }
+
+    function createColumnDiologOpen(idBoard){
+            var favDialog = document.getElementById('createColumnDialog');
+            favDialog.showModal();
+    }
+
+    function closeColumnCreateDialog(){
+        var favDialog = document.getElementById('createColumnDialog');
+        favDialog.close();
+    }
+
+    function goToMenu(){
+        window.location.replace(`/index.html`);
+    }
+</script>

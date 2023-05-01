@@ -1,0 +1,90 @@
+<template id="filter">
+    <style>
+        .wrapper{
+            display: grid;
+            grid-template-columns: 100px 200px;
+        }
+    </style>
+    <div class="wrapper">
+        <select id="property">
+            <option value="Users" selected>Исполнитель</option>
+            <option value="Labels">Ярлык</option>
+            <option value="Prioritys">Приоритет</option>
+        </select>
+
+        <select id="value">
+
+        </select>
+    </div>
+</template>
+
+<script type="module">
+    import Filter from "./src/Stores/FilterStore.js";
+    import {post} from "./src/Core/Api/Api.js";
+
+    class BoardColumn extends HTMLElement {
+        constructor() {
+            super();
+            // элемент создан
+        }
+
+        render() { // (1)
+            const template = document.querySelector('#filter');
+            
+            if(this.shadowRoot == null) this.attachShadow({mode: 'open'});
+            let node = template.content.cloneNode(true);
+            
+            const property = node.querySelector("#property");
+            const value = node.querySelector("#value");
+
+            this.shadowRoot.innerHTML = "";
+            this.shadowRoot.append(node);
+            this.loadLookup(property.value, value);
+            property.addEventListener("change", () => {
+                this.loadLookup(property.value, value);
+                Filter.change(null);
+            });
+            value.addEventListener("change", () => {
+                if(value.value !== "-1"){
+                    Filter.change({propertyName:property.value.slice(0, -1),  value:value.value});
+                }
+                else{
+                    Filter.change(null);
+                }
+            });
+        }
+
+        async loadLookup(property, value){
+            value.innerHTML = "";
+            const items = await post("/Board/getlookuplist",{Name:property});
+            
+            const standart = document.createElement('option');
+            standart.setAttribute("value", "-1");
+            standart.innerText = "Невыбранно";
+            value.append(standart);
+            
+            for(let item of items.items){
+                const option = document.createElement('option');
+                option.setAttribute("value", item.id);
+                option.innerText = item.displayValue;
+                value.append(option);
+            }
+        }
+
+        static get observedAttributes() {
+            return ['title', 'content', 'entity'];
+        }
+
+        connectedCallback() { // (2)
+            if (!this.rendered) {
+                this.render();
+                //this.rendered = true;
+            }
+        }
+
+        attributeChangedCallback(name, oldValue, newValue) {
+            this.render();
+        }
+    }
+    customElements.define('filter-board', BoardColumn);
+</script>
